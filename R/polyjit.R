@@ -79,13 +79,13 @@ query_speedup_papi <- function(extra_filter, base, jit, papi) {
     (
       SELECT project_name, metrics.name, SUM(metrics.value)
       FROM run, metrics
-      WHERE experiment_group = '%s' AND run.id = metrics.run_id AND metrics.name = 'pprof.time.total_s' 
+      WHERE experiment_group = '%s' AND run.id = metrics.run_id AND metrics.name = 'pprof.time.total_s'
       GROUP BY project_name, metrics.name
     ) AS pprof_total,
     (
       SELECT project_name, metrics.name, SUM(metrics.value)
       FROM run, metrics
-      WHERE experiment_group = '%s' AND run.id = metrics.run_id AND metrics.name = 'pprof.time.scops_s' 
+      WHERE experiment_group = '%s' AND run.id = metrics.run_id AND metrics.name = 'pprof.time.scops_s'
       GROUP BY project_name, metrics.name
   ) AS pprof_scops
     WHERE pjit.project_name = raw.project_name AND pjit.project_name = pprof_total.project_name AND pjit.project_name = pprof_scops.project_name
@@ -301,7 +301,7 @@ SELECT
 	pivot.name AS pname,
 	baseline.name AS bname,
 	FORMAT('%%s (%%s)', baseline.name, baseline.description) as bid,
-    FORMAT('%%s (%%s)', pivot.name, pivot.description) as gname, 
+    FORMAT('%%s (%%s)', pivot.name, pivot.description) as gname,
 	CAST(pivot.id AS TEXT) AS pid,
 	baseline.time AS seq_time,
 	pivot.time AS par_time,
@@ -322,7 +322,7 @@ FROM
 		experiment,
     project
 	WHERE 	experiment.id = run.experiment_group AND
-		run.id = metrics.run_id AND 
+		run.id = metrics.run_id AND
 		run.id = config.run_id AND
 		metrics.name = 'time.real_s' AND
 		config.name = 'cores' AND
@@ -346,7 +346,7 @@ FROM
 		config,
 		experiment
 	WHERE 	experiment.id = run.experiment_group AND
-		run.id = metrics.run_id AND 
+		run.id = metrics.run_id AND
 		run.id = config.run_id AND
 		metrics.name = 'time.real_s' AND
 		config.name = 'cores' AND

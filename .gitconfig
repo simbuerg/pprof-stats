@@ -1,0 +1,13 @@
+[user]
+	name = simbuerg
+	email = rstudio@example.com
+
+[credential]
+	helper = cache
+
+[push]
+	default = simple
+
+[core]
+	editor = vim
+
