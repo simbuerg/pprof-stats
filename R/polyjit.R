@@ -6,6 +6,14 @@ createCounter <- function(value) {
 
 inc <- createCounter(0)
 
+login.data <- function(p) {
+  if (file.exists(p)) {
+    return(read.csv(p, strip.white=TRUE))
+  } else {
+    return(NULL)
+  }
+}
+
 sql.get <- function(c, query) {
   n <- inc(1)
   cat(n,"-", "query: ", query, "\n")

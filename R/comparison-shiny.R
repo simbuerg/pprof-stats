@@ -1,8 +1,6 @@
 comparisonUI <- function(id, label = "Comparison") {
   ns <- NS(id)
   baselines <- ns("baselines")
-  cat("comparisonUI\n")
-  cat(baselines, "\n")
   experiments <- ns("experiments")
   projects <- ns("projects")
   groups <- ns("groups")

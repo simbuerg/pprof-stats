@@ -17,13 +17,7 @@ shinyApp(
         pprof::speedupPerProjectMenu(),
         pprof::perfMenu(),
         pprof::tasksMenu(),
-        selectInput(
-          "db",
-          label = "Database",
-          choices = c("home", "buildbot", "develop"),
-          multiple = FALSE,
-          selected = 0
-        )
+        uiOutput("dbui")
       )
     ),
     dashboardBody(
@@ -38,35 +32,47 @@ shinyApp(
     )
   ),
   server = function(input, output, session) {
-    con <- NULL
+    d <- login.data("./.pglogin")
+    db <- NULL
 
-    db <- reactive({
-      if (!is.null(con)) {
-        dbDisconnect(conn = con)
+    shiny::observeEvent(input$db, {
+      name <- input$db
+      if (name %in% d$name) {
+        if (!is.null(db)) {
+          dbDisconnect(conn = db)
+        }
+
+        login <- d[d$name==name,]
+        print(login)
+        db <- dbConnect(RPostgres::Postgres(),
+                         dbname = as.character(login$dbname),
+                         user = as.character(login$user),
+                         password = as.character(login$password),
+                         port = as.character(login$port),
+                         host = as.character(login$host))
+        exps <- get_experiments(db)
+
+        callModule(pprof::comparison, "comparison_ui", reactive(db), reactive(exps))
+        callModule(pprof::speedup, "speedup_ui", reactive(db), reactive(exps))
+        callModule(pprof::tasks, "tasks_ui", reactive(db), reactive(exps))
+        callModule(pprof::perf, "perf_ui", reactive(db), reactive(exps))
+        callModule(pprof::speedupPerProject, "speedup_per_project_ui", reactive(db), reactive(exps))
       }
-      validate(need(input$db, "Select a Database."))
-      if (input$db == 'home')
-        con <- dbConnect(RPostgres::Postgres(), dbname = 'pprof', user = 'pprof', password = 'pprof', port = 5432, host = '172.18.0.2' )
-      else if (input$db == 'buildbot')
-        con <- dbConnect(RPostgres::Postgres(), dbname = 'pprof-bb', user = 'bb', password = 'bb', port = 5432, host = 'debussy.fim.uni-passau.de')
-      else if (input$db == 'develop')
-        con <- dbConnect(RPostgres::Postgres(), dbname = 'pprof', user = 'pprof', password = 'pprof', port = 5432, host = 'debussy.fim.uni-passau.de')
-      cat("DB:", input$db, "\n")
-      return(con)
-    })
-    exps <- reactive({
-      get_experiments(db())
     })
 
-    callModule(pprof::comparison, "comparison_ui", db, exps)
-    callModule(pprof::speedup, "speedup_ui", db, exps)
-    callModule(pprof::tasks, "tasks_ui", db, exps)
-    callModule(pprof::perf, "perf_ui", db, exps)
-    callModule(pprof::speedupPerProject, "speedup_per_project_ui", db, exps)
+    output$dbui <- renderUI({
+      selectInput(
+        "db",
+        label = "Database",
+        choices = c("", as.vector(d$name)),
+        multiple = FALSE,
+        selected = 1
+      )
+    })
 
     session$onSessionEnded(function() {
-      if (!is.null(con))
-        dbDisconnect(con)
+      if (!is.null(db))
+        dbDisconnect(db)
     })
   }
 )
