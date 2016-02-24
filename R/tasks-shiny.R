@@ -22,118 +22,70 @@ tasksUI <- function(id, label = "Tasks") {
   ns <- NS(id)
 
   tagList(
-    fluidRow(
-      selectInput(ns("baseline"), label = "Baseline", multiple = FALSE, choices = NULL, width = '100%'),
-      box(title = "Summary", width = 12,
-          infoBoxOutput(ns("groupsCompleted")),
-          infoBoxOutput(ns("groupsFailed")),
-          infoBoxOutput(ns("groupsCount")),
-          infoBoxOutput(ns("tasksCompleted")),
-          infoBoxOutput(ns("tasksFailed")),
-          infoBoxOutput(ns("tasksCount"))
+    fluidRow(box(title = "Filter", width = 12,
+        selectInput(ns("experiment"), label = "Experiment", multiple = FALSE, choices = NULL)
       )
     ),
-    fluidRow(
-      tabBox(title = "Tool status output", width = 12, height = 1200,
-             tabPanel("Filter",
-                      box(title = "Task Groups", width = 6,
-                          dataTableOutput(ns("taskGroupTable"))
-                      ),
-                      box(title = "Tasks", width = 6,
-                          dataTableOutput(ns("taskTable"))
-                      )
-             ),
-             tabPanel("stdout",
-                      verbatimTextOutput(ns("stdout"))),
-             tabPanel("stderr",
-                      verbatimTextOutput(ns("stderr")))
-      )
+    fluidRow(box(title = "Task Groups", width = 12,
+                 dataTableOutput(ns("taskGroupTable")))),
+    fluidRow(box(title = "Tasks", width = 12,
+                 dataTableOutput(ns("taskTable")))),
+    fluidRow(box(title = "stdout", width = 12,
+                 verbatimTextOutput(ns("stdout")))),
+    fluidRow(box(title = "stderr", width = 12,
+                 verbatimTextOutput(ns("stderr")))
     )
   )
 }
 
 tasks <- function(input, output, session, db, exps) {
-  output$taskTable = renderDataTable({
-    validate(
-      need(input$baseline, "Select an experiment first.")
-    )
+  task.groups <- reactive({
+    validate(need(input$experiment, "Select an experiment first."))
+    return(db.taskGroups(db(), input$experiment))
+  })
 
-    tg <- taskGroups(db(), input$baseline)
-    if (length(input$taskGroupTable_rows_selected) > 0) {
-      tg <- tg[input$taskGroupTable_rows_selected, ]
-    }
-    t <- tasks(db(), input$baseline, tg[, 1])
-    return(t[,2:ncol(t)])
+  task.tasks <- function(db, experiment, task_groups) {
+    return(db.tasks(db, experiment, task_groups[, 1]))
+  }
+
+  task.run <- function(db, experiment, selected_task_groups, selected_task) {
+    t.groups <- db.taskGroups(db(), input$experiment)
+    if (length(selected_task_groups) > 0)
+      t.groups <- t.groups[selected_task_groups,]
+
+    t.tasks <- db.tasks(db, input$experiment, t.groups[, 1])
+    r <- as.numeric(t.tasks[selected_task, 1])
+    return(r)
+  }
+
+  output$taskTable = renderDataTable({
+    validate(need(input$experiment, "Select an experiment first."))
+    t.groups <- task.groups()
+
+    if (length(input$taskGroupTable_rows_selected) > 0)
+      t.groups <- t.groups[input$taskGroupTable_rows_selected,]
+
+    t.tasks <- task.tasks(db(), input$experiment, t.groups)
+    return(t.tasks[, 2:ncol(t.tasks)])
   }, options = list(
     pageLength = -1,
     rownames = FALSE,
-    columnDefs = list(
-      list(targets = 2, render = taskTableRenderOpts
-      ))), style = 'bootstrap', class = 'table-c0ndensed', selection = 'single')
+    columnDefs = list(list(targets = 2, render = taskTableRenderOpts))
+  ), style = 'bootstrap', class = 'table-c0ndensed', selection = 'single')
 
   output$taskGroupTable = renderDataTable({
-    validate(
-      need(input$baseline, "Select an experiment first.")
-    )
-    t <- taskGroups(db(), input$baseline)
-    return(t[,2:ncol(t)])
-  },
-  options = list(
+    validate(need(input$experiment, "Select an experiment first."))
+    t.groups <- task.groups()
+    return(t.groups[, 2:ncol(t.groups)])
+  }, options = list(
     pageLength = 50,
     rownames = FALSE,
-    columnDefs = list(
-      list(targets = 5, render = taskTableRenderOpts)
-    )
+    columnDefs = list(list(targets = 5, render = taskTableRenderOpts))
   ), style = 'bootstrap', class = 'table-condensed')
 
-  get_selected_run <- reactive({
-    validate(
-      need(input$baseline, "Select an experiment first.")
-    )
-
-    tg <- taskGroups(db(), input$baseline)
-    if (length(input$taskGroupTable_rows_selected) > 0) {
-      tg <- tg[input$taskGroupTable_rows_selected, ]
-    }
-    t <- tasks(db(), input$baseline, tg[, 1])
-    r <- as.numeric(t[input$taskTable_rows_selected, 1])
-    return(r)
-  })
-  output$groupsCompleted <- renderInfoBox({
-    infoBox(
-      "Completed (G)", icon = icon("thumbs-up", lib = "glyphicon"), color = "green"
-    )
-  })
-  output$groupsFailed <- renderInfoBox({
-    infoBox(
-      "Failed (G)", icon = icon("thumbs-up", lib = "glyphicon"), color = "red"
-    )
-  })
-  output$groupsCount <- renderInfoBox({
-    infoBox(
-      "Total (G)", icon = icon("thumbs-up", lib = "glyphicon"), color = "yellow"
-    )
-  })
-  output$tasksCompleted <- renderInfoBox({
-    infoBox(
-      "Completed (T)", icon = icon("thumbs-up", lib = "glyphicon"), color = "green"
-    )
-  })
-  output$tasksFailed <- renderInfoBox({
-    infoBox(
-      "Failed (T)", icon = icon("thumbs-up", lib = "glyphicon"), color = "red"
-    )
-  })
-  output$tasksCount <- renderInfoBox({
-    infoBox(
-      "Count (T)", icon = icon("thumbs-up", lib = "glyphicon"), color = "yellow"
-    )
-  })
   output$stdout = renderText({
-    validate(
-      need(input$taskTable_rows_selected, "No selection yet.")
-    )
-    r <- get_selected_run()
+    validate(need(input$taskTable_rows_selected, "No selection yet."))
+    r <- task.run(db(), input$experiment, input$taskGroupTable_rows_selected, input$taskTable_rows_selected)
 
     if (!is.null(r)) {
       return(paste("\n", stdout(db(), r)))
@@ -142,10 +94,8 @@ tasks <- function(input, output, session, db, exps) {
     return("No stdout found.")
   })
   output$stderr = renderText({
-    validate(
-      need(input$taskTable_rows_selected, "No selection yet.")
-    )
-    r <- get_selected_run()
+    validate(need(input$taskTable_rows_selected, "No selection yet."))
+    r <- task.run(db(), input$experiment, input$taskGroupTable_rows_selected, input$taskTable_rows_selected)
 
     if (!is.null(r)) {
       return(paste("\n", stderr(db(), r)))
@@ -155,8 +105,14 @@ tasks <- function(input, output, session, db, exps) {
   })
 
   observe({
+    db <- db()
     exps <- exps()
-    updateSelectInput(session, "baseline", choices = c(getSelections(NULL, exps)), selected = 0)
+    updateSelectInput(
+      session,
+      "experiment",
+      choices = c(getSelections(NULL, exps)),
+      selected = 0
+    )
   })
 }
 

@@ -232,7 +232,7 @@ groups <- function(c) {
   return(sql.get(c, q))
 }
 
-taskGroups <- function(c, exp) {
+db.taskGroups <- function(c, exp) {
   q <- sprintf(paste(
     "SELECT
       CAST(id as VARCHAR) as id,
@@ -247,7 +247,7 @@ taskGroups <- function(c, exp) {
   return(sql.get(c, q))
 }
 
-tasks <- function(c, exp, groups = NULL) {
+db.tasks <- function(c, exp, groups = NULL) {
   run_filter <- ""
   if (!is.null(groups) && length(groups) > 0) {
     run_filter <- sprintf("AND run_group IN (%s)",
