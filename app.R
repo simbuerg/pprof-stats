@@ -43,7 +43,6 @@ shinyApp(
         }
 
         login <- d[d$name==name,]
-        print(login)
         db <- dbConnect(RPostgres::Postgres(),
                          dbname = as.character(login$dbname),
                          user = as.character(login$user),
