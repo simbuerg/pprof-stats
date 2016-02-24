@@ -61,7 +61,7 @@ tasks <- function(input, output, session, db, exps) {
     t.tasks <- task.tasks(db(), input$experiment, t.groups)
     return(t.tasks[, 2:ncol(t.tasks)])
   }, options = list(
-    pageLength = -1,
+    pageLength = 10,
     rownames = FALSE,
     columnDefs = list(list(targets = 2, render = taskTableRenderOpts))
   ), style = 'bootstrap', class = 'table-c0ndensed', selection = 'single')
@@ -71,7 +71,7 @@ tasks <- function(input, output, session, db, exps) {
     t.groups <- task.groups()
     return(t.groups[, 2:ncol(t.groups)])
   }, options = list(
-    pageLength = 50,
+    pageLength = 10,
     rownames = FALSE,
     columnDefs = list(list(targets = 5, render = taskTableRenderOpts))
   ), style = 'bootstrap', class = 'table-condensed')
