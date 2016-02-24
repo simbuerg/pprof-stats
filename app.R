@@ -57,6 +57,7 @@ shinyApp(
         callModule(pprof::tasks, "tasks_ui", reactive(db), reactive(exps))
         callModule(pprof::perf, "perf_ui", reactive(db), reactive(exps))
         callModule(pprof::speedupPerProject, "speedup_per_project_ui", reactive(db), reactive(exps))
+        callModule(pprof::summary, "summary_ui", reactive(db), reactive(exps))
       }
     })
 

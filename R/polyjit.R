@@ -54,7 +54,7 @@ get_experiments_per_project <- function(c, project) {
 }
 
 get_projects_per_experiment <- function(c, exp_id) {
-  q <- sprintf("SELECT project_name, status, MAX(finished) FROM run, log WHERE run.id = log.run_id AND experiment_group = '%s' GROUP BY project_name, status;", exp_id)
+  q <- sprintf("SELECT project_name as \"Project\", run.status as \"Status\", MAX(run.\"end\") as \"Completed @\" FROM run, log WHERE run.id = log.run_id AND experiment_group = '%s' GROUP BY project_name, run.status;", exp_id)
   return(sql.get(c, q))
 }
 
