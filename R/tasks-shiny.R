@@ -11,13 +11,6 @@ taskTableRenderOpts <- DT::JS(
         "  }",
         "}")
 
-taskTableOpts <- list(
-    pageLength = 50,
-    rownames = TRUE,
-    columnDefs = list(
-      list(targets = 5, render = taskTableRenderOpts
-      )))
-
 tasksUI <- function(id, label = "Tasks") {
   ns <- NS(id)
 
