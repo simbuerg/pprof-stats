@@ -463,22 +463,54 @@ regions_data <- function(c, baselines, experiments, projects, groups, regions) {
 
   q <- sprintf(paste("
 SELECT
-  run.experiment_group, project.name as pname, p.name as region_name, SUM(p.duration) as sum_dur
+  p.experiment_group,
+  p.pname,
+  p.region_name,
+  p.sum_dur,
+  t.total as total,
+  (p.sum_dur / t.total) as proportion
 FROM
-  run,
-  project,
-  pprof_perf_events as p
+  (
+  SELECT
+    run.experiment_group, project.name as pname, p.name as region_name, SUM(p.duration) as sum_dur
+  FROM
+    run,
+    project,
+    pprof_perf_events as p
+  WHERE
+    run.id = p.run_id and
+    run.project_name = project.name and
+    p.name <> 'TOTAL'
+    %s
+    %s
+    %s
+    %s
+  group by run.experiment_group, project.name, p.name
+  order by run.experiment_group, p.name
+  ) as p,
+  (
+  SELECT
+    run.experiment_group, project.name as pname, p.name as region_name, SUM(p.duration) as total
+  FROM
+    run,
+    project,
+    pprof_perf_events as p
+  WHERE
+    run.id = p.run_id and
+    run.project_name = project.name and
+    p.name = 'TOTAL'
+    %s
+    %s
+    %s
+    %s
+  group by run.experiment_group, project.name, p.name
+  order by run.experiment_group, p.name
+  ) as t
 WHERE
-  run.id = p.run_id and
-  run.project_name = project.name and
-  p.name <> 'TOTAL'
-  %s
-  %s
-  %s
-  %s
-group by run.experiment_group, project.name, p.name
-order by run.experiment_group, p.name
+  p.pname = t.pname and
+  p.experiment_group = t.experiment_group
+ order by p.experiment_group, p.pname
                      "
-	 ), in_baselines, in_projects, in_groups, in_regions) #in_experiments
+	 ), in_baselines, in_projects, in_groups, in_regions, in_baselines, in_projects, in_groups, in_regions) #in_experiments
 	 return(sql.get(c, query = q))
 }

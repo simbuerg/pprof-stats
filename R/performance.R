@@ -105,7 +105,7 @@ performance <- function(input, output, session, db, exps) {
 
   output$region_proportion_ppro_ui <- renderUI({
     ns <- session$ns
-    plotOutput(ns("region_proportion_ppro"), height = 800 * compHeight())
+    plotOutput(ns("region_proportion_ppro"), height = 3200 * compHeight())
   })
 
   output$region_sup = renderPlot({
@@ -139,8 +139,8 @@ performance <- function(input, output, session, db, exps) {
     #  facet_grid(gname ~ bid) +
     #  scale_x_discrete() +
     #  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-    p <- ggplot(data = d, aes(x = pname, y = sum_dur)) +
-      geom_bar(aes(fill = region_name), stat="identity", position = "fill") +
+    p <- ggplot(data = d, aes(x = pname, y = proportion)) +
+      geom_bar(aes(fill = region_name), stat="identity") +
       facet_grid(experiment_group ~ .)
     p
   })
@@ -155,9 +155,9 @@ performance <- function(input, output, session, db, exps) {
     #  facet_grid(gname ~ bid) +
     #  scale_x_discrete() +
     #  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-    p <- ggplot(data = d, aes(x = experiment_group, y = sum_dur)) +
-      geom_bar(aes(fill = region_name), stat="identity", position = "fill") +
-      facet_grid(. ~ pname)
+    p <- ggplot(data = d, aes(x = experiment_group, y = proportion)) +
+      geom_bar(aes(fill = region_name), stat="identity") +
+      facet_wrap(~ pname, ncol = 4)
     p
   })
 
