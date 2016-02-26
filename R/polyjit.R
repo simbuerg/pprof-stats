@@ -368,3 +368,117 @@ ORDER BY baseline.project, baseline.description, pivot.project, pivot.descriptio
 	 ), in_baselines, in_projects, in_groups, in_experiments)
 	 return(sql.get(c, query = q))
 }
+
+baseline_vs_pivot_perf <- function(c, baselines, experiments, projects, groups, regions) {
+  in_baselines <- in_set_expr("experiment_group", baselines)
+  in_experiments <- in_set_expr("experiment_group", experiments)
+  in_projects <- in_set_expr("project.name", projects)
+  in_groups <- in_set_expr("project.group_name", groups)
+  in_regions <- in_set_expr("regions", regions)
+
+  print("foo")
+
+  q <- sprintf(paste("
+SELECT * FROM
+(
+  SELECT
+    baseline.project,
+    baseline.description AS bdesc,
+    pivot.name AS pname,
+    baseline.name AS bname,
+    FORMAT('%%s (%%s)', baseline.name, baseline.description) as bid,
+    FORMAT('%%s (%%s)', pivot.name, pivot.description) as gname,
+    CAST(pivot.id AS TEXT) AS pid,
+    baseline.time AS seq_time,
+    pivot.time AS par_time,
+    pivot.timestamp AS timestamp,
+    CAST(pivot.num_cores AS INTEGER) AS num_cores,
+  ( baseline.time / pivot.time ) AS speedup
+  FROM
+  (
+  SELECT 	project_name AS project,
+    experiment.description,
+    experiment.id AS id,
+    experiment.name AS name,
+    config.value AS num_cores,
+    SUM(ppe.duration) AS time
+  FROM 	run,
+    config,
+    experiment,
+    pprof_perf_events as ppe,
+    project
+  WHERE 	experiment.id = run.experiment_group AND
+    run.id = ppe.run_id AND
+    run.id = config.run_id AND
+    config.name = 'cores' AND
+    run.project_name = project.name AND
+    experiment_name IN ('raw', 'pj-raw', 'pj-papi')
+    %s
+    %s
+    %s
+  GROUP BY experiment.name, experiment.id, project_name, config.value
+  ) baseline JOIN
+  (
+  SELECT 	project_name AS project,
+    experiment.description,
+    experiment.id AS id,
+    experiment.name AS name,
+    config.value as num_cores,
+    SUM(ppe.duration) AS time,
+    MIN(run.end) AS timestamp
+  FROM 	run,
+    config,
+    experiment,
+    pprof_perf_events as ppe
+  WHERE 	experiment.id = run.experiment_group AND
+    run.id = config.run_id AND
+    run.id = ppe.run_id AND
+    config.name = 'cores' AND
+    experiment_name IN ('pj-raw', 'polly-openmp', 'pj-papi')
+    %s
+  GROUP BY experiment.id, experiment.name, project_name, config.value
+  ) pivot ON (baseline.project = pivot.project AND baseline.num_cores = pivot.num_cores)
+  ORDER BY baseline.project, baseline.description, pivot.project, pivot.description
+  ) p;"
+	 ), in_baselines, in_projects, in_groups, in_experiments, in_regions) #TODO too many -> error?
+	 return(sql.get(c, query = q))
+}
+
+regions <- function(c) {
+  q <- "SELECT name from pprof_perf_events group by name;"
+  return(sql.get(c, q))
+}
+
+regions_data <- function(c, baselines, experiments, projects, groups, regions) {
+  print(typeof(baselines))
+  print(baselines)
+  in_baselines <- in_set_expr("experiment_group", c(baselines, experiments))
+  print(c(baselines, experiments))
+  #in_experiments <- in_set_expr("experiment_group", experiments)
+  in_projects <- in_set_expr("project.name", projects)
+  in_groups <- in_set_expr("project.group_name", groups)
+  in_regions <- in_set_expr("p.name", regions)
+
+  print("regions data")
+
+  q <- sprintf(paste("
+SELECT
+  run.experiment_group, project.name as pname, p.name as region_name, SUM(p.duration) as sum_dur
+FROM
+  run,
+  project,
+  pprof_perf_events as p
+WHERE
+  run.id = p.run_id and
+  run.project_name = project.name and
+  p.name <> 'TOTAL'
+  %s
+  %s
+  %s
+  %s
+group by run.experiment_group, project.name, p.name
+order by run.experiment_group, p.name
+                     "
+	 ), in_baselines, in_projects, in_groups, in_regions) #in_experiments
+	 return(sql.get(c, query = q))
+}

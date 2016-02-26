@@ -15,6 +15,7 @@ shinyApp(
         pprof::comparisonMenu(),
         pprof::speedupMenu(),
         pprof::speedupPerProjectMenu(),
+        pprof::performanceMenu(),
         pprof::perfMenu(),
         pprof::tasksMenu(),
         uiOutput("dbui")
@@ -26,6 +27,7 @@ shinyApp(
         tabItem(tabName = "comparison", pprof::comparisonUI("comparison_ui")),
         tabItem(tabName = "speedupExperiment", pprof::speedupUI("speedup_ui")),
         tabItem(tabName = "speedupProject", pprof::speedupPerProjectUI("speedup_per_project_ui")),
+        tabItem(tabName = "performance", pprof::performanceUI("performance_ui")),
         tabItem(tabName = "profiles", pprof::perfUI("perf_ui")),
         tabItem(tabName = "tasks", pprof::tasksUI("tasks_ui"))
       )
@@ -54,6 +56,7 @@ shinyApp(
         callModule(pprof::comparison, "comparison_ui", reactive(db), reactive(exps))
         callModule(pprof::speedup, "speedup_ui", reactive(db), reactive(exps))
         callModule(pprof::tasks, "tasks_ui", reactive(db), reactive(exps))
+        callModule(pprof::performance, "performance_ui", reactive(db), reactive(exps))
         callModule(pprof::perf, "perf_ui", reactive(db), reactive(exps))
         callModule(pprof::speedupPerProject, "speedup_per_project_ui", reactive(db), reactive(exps))
         callModule(pprof::summary, "summary_ui", reactive(db), reactive(exps))
