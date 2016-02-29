@@ -130,15 +130,8 @@ performance <- function(input, output, session, db, exps) {
   })
 
   output$region_proportion_pexp = renderPlot({
-    #d <- base_vs_pivot()
     d <- regions_portion()
     print(head(d))
-    #print(d)
-    #p <- ggplot(data = d, aes(x = num_cores, y = speedup, colour = pid)) +
-    #  geom_boxplot(aes(group = num_cores), outlier.size = 0) +
-    #  facet_grid(gname ~ bid) +
-    #  scale_x_discrete() +
-    #  theme(axis.text.x = element_text(angle = 90, hjust = 1))
     p <- ggplot(data = d, aes(x = pname, y = proportion)) +
       geom_bar(aes(fill = region_name), stat="identity") +
       facet_grid(experiment_group ~ .)
@@ -146,15 +139,8 @@ performance <- function(input, output, session, db, exps) {
   })
 
   output$region_proportion_ppro = renderPlot({
-    #d <- base_vs_pivot()
     d <- regions_portion()
     print(head(d))
-    #print(d)
-    #p <- ggplot(data = d, aes(x = num_cores, y = speedup, colour = pid)) +
-    #  geom_boxplot(aes(group = num_cores), outlier.size = 0) +
-    #  facet_grid(gname ~ bid) +
-    #  scale_x_discrete() +
-    #  theme(axis.text.x = element_text(angle = 90, hjust = 1))
     p <- ggplot(data = d, aes(x = experiment_group, y = proportion)) +
       geom_bar(aes(fill = region_name), stat="identity") +
       facet_wrap(~ pname, ncol = 4)

@@ -452,7 +452,7 @@ regions <- function(c) {
 regions_data <- function(c, baselines, experiments, projects, groups, regions) {
   print(typeof(baselines))
   print(baselines)
-  in_baselines <- in_set_expr("experiment_group", c(baselines, experiments))
+  in_baselines <- in_set_expr("p.experiment_group", c(baselines, experiments))
   print(c(baselines, experiments))
   #in_experiments <- in_set_expr("experiment_group", experiments)
   in_projects <- in_set_expr("project.name", projects)
@@ -481,10 +481,6 @@ FROM
     run.id = p.run_id and
     run.project_name = project.name and
     p.name <> 'TOTAL'
-    %s
-    %s
-    %s
-    %s
   group by run.experiment_group, project.name, p.name
   order by run.experiment_group, p.name
   ) as p,
@@ -499,18 +495,20 @@ FROM
     run.id = p.run_id and
     run.project_name = project.name and
     p.name = 'TOTAL'
-    %s
-    %s
-    %s
-    %s
   group by run.experiment_group, project.name, p.name
   order by run.experiment_group, p.name
   ) as t
 WHERE
   p.pname = t.pname and
   p.experiment_group = t.experiment_group
+    %s
+    %s
+    %s
+    %s
  order by p.experiment_group, p.pname
-                     "
-	 ), in_baselines, in_projects, in_groups, in_regions, in_baselines, in_projects, in_groups, in_regions) #in_experiments
+
+;
+"), in_baselines, in_projects, in_groups, in_regions, in_baselines, in_projects, in_groups, in_regions) #in_experiments
+  print("asdfasdfasdfasd")
 	 return(sql.get(c, query = q))
 }
