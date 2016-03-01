@@ -70,6 +70,30 @@ performance <- function(input, output, session, db, exps) {
     baseline_vs_pivot_perf(db(), input$baselines, input$experiments, input$projects, input$groups, input$regions)
   })
 
+  baseR_vs_pivot <- reactive({
+    validate(
+      need(input$baselines, "Select baselines to compare."),
+      need(input$experiments, "Select experiments to compare.")
+    )
+    if (length(input$baselines) == 0 ||
+        length(input$experiments) == 0 )
+      return(NULL)
+
+    baselineR_vs_pivot_perf(db(), input$baselines, input$experiments, input$projects, input$groups, input$regions)
+  })
+
+  baseRpc_vs_pivot <- reactive({
+    validate(
+      need(input$baselines, "Select baselines to compare."),
+      need(input$experiments, "Select experiments to compare.")
+    )
+    if (length(input$baselines) == 0 ||
+        length(input$experiments) == 0 )
+      return(NULL)
+
+    baselineRpc_vs_pivot_perf(db(), input$baselines, input$experiments, input$projects, input$groups, input$regions)
+  })
+
   regions_portion <- reactive({
     validate(
       need(input$baselines, "Select baselines to compare.")
@@ -90,12 +114,12 @@ performance <- function(input, output, session, db, exps) {
 
   output$region_sup_ui <- renderUI({
     ns <- session$ns
-    plotOutput(ns("region_sup"), height = 400 * compHeight())
+    plotOutput(ns("region_sup"), height = 800 * compHeight())
   })
 
   output$region_sup_pcore_ui <- renderUI({
     ns <- session$ns
-    plotOutput(ns("region_sup_pcore"), height = 400 * compHeight())
+    plotOutput(ns("region_sup_pcore"), height = 800 * compHeight())
   })
 
   output$region_proportion_pexp_ui <- renderUI({
@@ -109,10 +133,10 @@ performance <- function(input, output, session, db, exps) {
   })
 
   output$region_sup = renderPlot({
-    d <- base_vs_pivot()
-    print(head(d))
-    p <- ggplot(data = d, aes(x = num_cores, y = speedup, colour = pid)) +
-      geom_boxplot(aes(group = num_cores), outlier.size = 0) +
+    d <- baseR_vs_pivot()
+    p <- ggplot(data = d, aes(x = region_name, y = speedup, colour = pid)) +
+      geom_boxplot(aes(group = region_name), outlier.size = 0) +
+      ylim(0,5) +
       facet_grid(gname ~ bid) +
       scale_x_discrete() +
       theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -125,13 +149,13 @@ performance <- function(input, output, session, db, exps) {
       geom_boxplot(aes(group = num_cores), outlier.size = 0) +
       facet_grid(gname ~ bid) +
       scale_x_discrete() +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+      theme_bw()
+      #+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
     p
   })
 
   output$region_proportion_pexp = renderPlot({
     d <- regions_portion()
-    print(head(d))
     p <- ggplot(data = d, aes(x = pname, y = proportion)) +
       geom_bar(aes(fill = region_name), stat="identity") +
       facet_grid(experiment_group ~ .)
@@ -140,7 +164,6 @@ performance <- function(input, output, session, db, exps) {
 
   output$region_proportion_ppro = renderPlot({
     d <- regions_portion()
-    print(head(d))
     p <- ggplot(data = d, aes(x = experiment_group, y = proportion)) +
       geom_bar(aes(fill = region_name), stat="identity") +
       facet_wrap(~ pname, ncol = 4)
