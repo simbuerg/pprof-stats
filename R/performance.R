@@ -144,9 +144,24 @@ performance <- function(input, output, session, db, exps) {
   })
 
   output$region_sup_pcore = renderPlot({
-    d <- base_vs_pivot()
-    p <- ggplot(data = d, aes(x = num_cores, y = speedup, colour = pid)) +
-      geom_boxplot(aes(group = num_cores), outlier.size = 0) +
+    #d <- base_vs_pivot()
+    #print(head(d))
+    #p <- ggplot(data = d, aes(x = num_cores, y = speedup, colour = pid)) +
+    #  geom_boxplot(aes(group = num_cores), outlier.size = 0) +
+    #  facet_grid(gname ~ bid) +
+    #  scale_x_discrete() +
+    #  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    #p
+    d <- baseRpc_vs_pivot()
+    print(head(d,100))
+    print(rep(unique(d$region_id), length(d$num_cores)/3))
+    print(length(interaction(d$num_cores,d$region_id)))
+    print(length(d))
+    print(length(unique(d$region_id)))
+    p <- ggplot(data = d, aes(x = num_cores, y = speedup)) +
+      geom_boxplot(aes(fill = interaction(region_name, num_cores)), width = 0.8, outlier.size = 0) +
+      #scale_fill_manual(name="Regions", values=c("pink", "green", "black"), labels=c("-42" = "TOTAL", "-43" = "Init", "-44.2" = "WAT")) +
+      ylim(0,5) +
       facet_grid(gname ~ bid) +
       scale_x_discrete() +
       theme_bw()
