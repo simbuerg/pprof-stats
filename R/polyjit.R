@@ -700,6 +700,6 @@ WHERE
  order by p.experiment_group, p.pname
 
 ;
-"), in_baselines, in_projects, in_groups, in_regions, in_baselines, in_projects, in_groups, in_regions) #in_experiments
+"), in_baselines, in_projects, in_groups, in_regions, in_baselines, in_projects, in_groups) #in_experiments
 	 return(sql.get(c, query = q))
 }
