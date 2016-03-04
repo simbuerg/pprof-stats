@@ -759,6 +759,7 @@ WHERE
     e_1.project = e_2.project AND
     e_1.name = e_2.name AND
     e_1.DEBUG_TYPE = e_2.DEBUG_TYPE
+ORDER BY delta
                      "), in_baselines, in_projects, in_groups, in_experiments, in_projects, in_groups)
   return(sql.get(c, query = q))
 }

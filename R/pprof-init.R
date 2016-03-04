@@ -44,4 +44,9 @@ init <- function() {
     install.packages("shinydashboard")
     library(shinydashboard)
   }
+
+  if (!require("RColorBrewer")) {
+    install.packages("RColorBrewer")
+    library(RColorBrewer)
+  }
 }

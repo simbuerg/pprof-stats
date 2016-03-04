@@ -49,9 +49,25 @@ compilestats <- function(input, output, session, db, exps) {
         length(input$experiment_2) == 0 )
       return(NULL)
 
+    # formatStyle('delta',
+    #             fontWeight = 'bold',
+    #             backgroundColor = styleInterval(c(-1,1,10000), c('red', 'white', '#33FF33','green')))
     d <- experiment_cstats_comp(db(), input$experiment_1, input$experiment_2, input$projects, input$groups)
-    print(head(d))
-    d
+    df <- datatable(d)
+    lower <- d[d$delta < 0,]
+    lower <- lower[sample(nrow(lower), min(nrow(lower), 50)),]$delta
+
+    zero <- d[d$delta == 0,]
+    zero <- zero[sample(nrow(zero), min(nrow(zero), 1)),]$delta
+
+    upper <- d[d$delta > 0,]
+    upper <- upper[sample(nrow(upper), min(nrow(upper), 50)),]$delta
+
+    range <- c(lower,zero,upper)
+    df <- df %>% formatStyle('delta',
+                       fontWeight = 'bold',
+                       backgroundColor = styleInterval(sort(range), colorRampPalette(brewer.pal(11, 'RdYlGn'))(length(range)+1)))
+    return(df)
   })
 
   observe({
