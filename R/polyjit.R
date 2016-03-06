@@ -712,12 +712,12 @@ experiment_cstats_comp <- function(c, baselines, experiments, projects, groups, 
 
   q <- sprintf(paste("
 SELECT
-  e_1.project,
-  e_1.name,
-  e_1.DEBUG_TYPE,
-  e_1.cs_value AS exp_1_value,
-  e_2.cs_value AS exp_2_value,
-  (e_2.cs_value - e_1.cs_value) AS delta
+  coalesce(e_1.project, e_2.project) AS project,
+  coalesce(e_1.name, e_2.name) AS name,
+  coalesce(e_1.DEBUG_TYPE, e_2.DEBUG_TYPE) as DEBUG_TYPE,
+  coalesce(e_1.cs_value, 0) AS exp_1_value,
+  coalesce(e_2.cs_value, 0) AS exp_2_value,
+  (coalesce(e_2.cs_value, 0) - coalesce(e_1.cs_value, 0)) AS delta
 FROM (
           SELECT
             run.project_name AS project,
@@ -736,7 +736,8 @@ FROM (
             %s
             %s -- AND run.experiment_group IN ('9ad3159b-f6e2-4570-b027-1d1a0c040d11')
           GROUP BY run.project_name, cs.name, cs.component
-     ) AS e_1,(
+     ) AS e_1
+  FULL JOIN (
           SELECT
             run.project_name AS project,
             cs.name,
@@ -755,10 +756,7 @@ FROM (
             %s -- AND run.experiment_group IN ('810b150c-84c6-4bee-bafb-8bb3cf72fabf')
           GROUP BY run.project_name, cs.name, cs.component
      ) AS e_2
-WHERE
-    e_1.project = e_2.project AND
-    e_1.name = e_2.name AND
-    e_1.DEBUG_TYPE = e_2.DEBUG_TYPE
+  ON e_1.project = e_2.project AND e_1.name = e_2.name AND e_1.DEBUG_TYPE = e_2.DEBUG_TYPE
 ORDER BY delta
                      "), in_baselines, in_projects, in_groups, in_experiments, in_projects, in_groups)
   return(sql.get(c, query = q))
