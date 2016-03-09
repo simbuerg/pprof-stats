@@ -760,7 +760,7 @@ FROM (
           GROUP BY run.project_name, cs.name, cs.component
      ) AS e_2
   ON e_1.project = e_2.project AND e_1.name = e_2.name AND e_1.DEBUG_TYPE = e_2.DEBUG_TYPE
-ORDER BY delta;
+ORDER BY delta DESC;
                      "), in_baselines, in_projects, in_groups, in_names, in_experiments, in_projects, in_groups, in_names)
   return(sql.get(c, query = q))
 }
