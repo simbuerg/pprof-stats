@@ -4,7 +4,7 @@ compilestatsUI <- function(id, label = "Compilestats") {
   experiment_2 <- ns("experiment_2")
   projects <- ns("projects")
   groups <- ns("groups")
-  cs_names <- ns("names")
+  cs_names <- ns("cs_names")
   single_ui <- ns("single_ui")
   pairwise_ui <- ns("pairwise_ui")
 

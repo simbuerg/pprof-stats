@@ -704,7 +704,7 @@ WHERE
 	 return(sql.get(c, query = q))
 }
 
-experiment_cstats_comp <- function(c, baselines, experiments, projects, groups, names) {
+experiment_cstats_comp <- function(c, baselines, experiments, projects, groups, cs_names) {
   in_baselines <- in_set_expr("run.experiment_group", baselines)
   in_experiments <- in_set_expr("run.experiment_group", experiments)
   in_projects <- in_set_expr("project.name", projects)
