@@ -709,7 +709,7 @@ experiment_cstats_comp <- function(c, baselines, experiments, projects, groups, 
   in_experiments <- in_set_expr("run.experiment_group", experiments)
   in_projects <- in_set_expr("project.name", projects)
   in_groups <- in_set_expr("project.group_name", groups)
-  in_names <- in_set_expr('cs.name', names)
+  in_names <- in_set_expr("cs.name", names)
 
   q <- sprintf(paste("
 SELECT
