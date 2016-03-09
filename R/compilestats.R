@@ -10,8 +10,8 @@ compilestatsUI <- function(id, label = "Compilestats") {
   tagList(
     fluidRow(
       box(title = "Experiments", solidHeader = TRUE, width = 6,
-          selectInput(experiment_1, label = "experiment_1", multiple = FALSE, choices = NULL, width = '100%'),
-          selectInput(experiment_2, label = "experiment_2", multiple = FALSE, choices = NULL, width = '100%')),
+          selectInput(experiment_1, label = "Compare", multiple = FALSE, choices = NULL, width = '100%'),
+          selectInput(experiment_2, label = "To", multiple = FALSE, choices = NULL, width = '100%')),
       box(title = "Filters", solidHeader = TRUE, width = 6,
           selectInput(projects, label = "Projects", multiple = TRUE, choices = NULL, width = '100%'),
           selectInput(groups, label = "Groups", multiple = TRUE, choices = NULL, width = '100%'))
