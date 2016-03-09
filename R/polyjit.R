@@ -704,12 +704,13 @@ WHERE
 	 return(sql.get(c, query = q))
 }
 
-experiment_cstats_comp <- function(c, baselines, experiments, projects, groups, cs_names) {
+experiment_cstats_comp <- function(c, baselines, experiments, projects, groups, cs_names, comps) {
   in_baselines <- in_set_expr("run.experiment_group", baselines)
   in_experiments <- in_set_expr("run.experiment_group", experiments)
   in_projects <- in_set_expr("project.name", projects)
   in_groups <- in_set_expr("project.group_name", groups)
   in_names <- in_set_expr("cs.name", cs_names)
+  in_comps <- in_set_expr("cs.component", comps)
 
   q <- sprintf(paste("
 SELECT
@@ -731,8 +732,8 @@ FROM (
             project
           WHERE
             run.id = cs.run_id AND
-            cs.component IN ('polyjit', 'polly-detect') AND
             run.project_name = project.name
+            %s
             %s
             %s
             %s
@@ -751,8 +752,8 @@ FROM (
             project
           WHERE
             run.id = cs.run_id AND
-            cs.component IN ('polyjit', 'polly-detect') AND
             run.project_name = project.name
+            %s
             %s
             %s
             %s
@@ -761,11 +762,17 @@ FROM (
      ) AS e_2
   ON e_1.project = e_2.project AND e_1.name = e_2.name AND e_1.DEBUG_TYPE = e_2.DEBUG_TYPE
 ORDER BY delta DESC;
-                     "), in_baselines, in_projects, in_groups, in_names, in_experiments, in_projects, in_groups, in_names)
+                     "), in_baselines, in_projects, in_groups, in_names, in_comps,
+                       in_experiments, in_projects, in_groups, in_names, in_comps)
   return(sql.get(c, query = q))
 }
 
 cs_names <- function(c) {
   q <- "SELECT DISTINCT name from compilestats;"
+  return(sql.get(c, query = q))
+}
+
+comps <- function(c) {
+  q <- "SELECT DISTINCT component from compilestats;"
   return(sql.get(c, query = q))
 }
