@@ -53,7 +53,7 @@ compilestats <- function(input, output, session, db, exps) {
     #             fontWeight = 'bold',
     #             backgroundColor = styleInterval(c(-1,1,10000), c('red', 'white', '#33FF33','green')))
     d <- experiment_cstats_comp(db(), input$experiment_1, input$experiment_2, input$projects, input$groups)
-    df <- datatable(d, options(list(lengthMenu = c(50, 100, 500, nrow(d)), pageLength = nrow(d))))
+    df <- datatable(d)
     lower <- d[d$delta < 0,]
     lower <- lower[sample(nrow(lower), min(nrow(lower), 50)),]$delta
 
@@ -68,7 +68,7 @@ compilestats <- function(input, output, session, db, exps) {
                        fontWeight = 'bold',
                        backgroundColor = styleInterval(sort(range), colorRampPalette(brewer.pal(11, 'RdYlGn'))(length(range)+1)))
     return(df)
-  })
+  }, options(list(lengthMenu = c(50, 100, 500, nrow(d)), pageLength = nrow(d))))
 
   observe({
     db <- db()
