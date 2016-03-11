@@ -62,7 +62,7 @@ tasks <- function(input, output, session, db, exps) {
 
   output$taskTable = renderDataTable({
     validate(need(input$experiment, "Select an experiment first."))
-    t.groups <- task.groups()
+    t.groups <- db.taskGroups(db(), input$experiment)
 
     if (length(input$taskGroupTable_rows_selected) > 0)
       t.groups <- t.groups[input$taskGroupTable_rows_selected,]
@@ -77,7 +77,7 @@ tasks <- function(input, output, session, db, exps) {
 
   output$taskGroupTable = renderDataTable({
     validate(need(input$experiment, "Select an experiment first."))
-    t.groups <- task.groups()
+    t.groups <- db.taskGroups(db(), input$experiment)
     return(t.groups[, 2:ncol(t.groups)])
   }, options = list(
     pageLength = 10,
