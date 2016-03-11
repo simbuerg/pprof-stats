@@ -19,6 +19,15 @@ tasksUI <- function(id, label = "Tasks") {
         selectInput(ns("experiment"), label = "Experiment", multiple = FALSE, choices = NULL)
       )
     ),
+    fluidRow(box(title = "Information", width = 12,
+        box(title="Group Stats", width = 6,
+            plotOutput(ns("groupStats"))
+        ),
+        box(title="Single Stats", width = 6,
+            plotOutput(ns("singleStats"))
+        )
+      )
+    ),
     fluidRow(box(title = "Task Groups", width = 12,
                  dataTableOutput(ns("taskGroupTable")))),
     fluidRow(box(title = "Tasks", width = 12,
@@ -97,6 +106,26 @@ tasks <- function(input, output, session, db, exps) {
     return("No stderr found.")
   })
 
+  output$groupStats = renderPlot({
+    validate(need(input$experiment, "Select an experiment first."))
+    d <- db.groupStats(db(), input$experiment)
+
+    p <- ggplot(d, aes(x = factor(1), y = value, fill = status)) +
+      geom_bar(width = 1, stat="identity") +
+      coord_polar("y")
+    return(p)
+  })
+
+  output$singleStats = renderPlot({
+    validate(need(input$experiment, "Select an experiment first."))
+    d <- db.singleStats(db(), input$experiment)
+
+    p <- ggplot(d, aes(x = factor(1), y = value, fill = status)) +
+      geom_bar(width = 1, stat = "identity") +
+      coord_polar("y")
+    return(p)
+  })
+
   observe({
     db <- db()
     exps <- exps()
@@ -107,6 +136,16 @@ tasks <- function(input, output, session, db, exps) {
       selected = 0
     )
   })
+}
+
+db.groupStats <- function(c, exp) {
+  q <- sprintf("select cast(coalesce(status, 'failed') as varchar) as status, count(status) as value from rungroup WHERE experiment = '%s' GROUP BY rungroup.status;", exp)
+  return(sql.get(c, q))
+}
+
+db.singleStats <- function(c, exp) {
+  q <- sprintf("select cast(coalesce(status, 'failed') as varchar) as status, count(status) as value from run WHERE experiment_group = '%s' GROUP BY run.status;", exp)
+  return(sql.get(c, q))
 }
 
 tasksMenu <- function() {
