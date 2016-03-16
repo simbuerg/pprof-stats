@@ -63,10 +63,10 @@ speedupUI <- function(id, label = "Speedup") {
 speedup <- function(input, output, session, db, exps) {
   output$ui = renderUI({
     ns <- session$ns
-    plotOutput(ns("ui"), width = "100%", height = input$plotSize)
+    plotOutput(ns("speedup_plot"), width = "100%", height = input$plotSize)
   })
 
-  output$speedup = renderPlot({
+  output$speedup_plot = renderPlot({
     validate(
       need(input$baseline, "Select a RAW-compatible experiment as baseline first."),
       need(input$jitExperiments, "Select a JIT-compatible experiment first."),
@@ -79,12 +79,12 @@ speedup <- function(input, output, session, db, exps) {
       papi <- NULL
     }
 
-    d <- speedup(db(),
-                 input$baseline,
-                 input$jitExperiments,
-                 papi,
-                 input$projects,
-                 input$groups)
+    d <- speedup_data(db(),
+                      input$baseline,
+                      input$jitExperiments,
+                      papi,
+                      input$projects,
+                      input$groups)
 
     if (nrow(d) > 0) {
       p <- ggplot(data=d, aes(x = cores, y = speedup_corrected, fill = cores, color = cores))
@@ -97,10 +97,10 @@ speedup <- function(input, output, session, db, exps) {
         p <- p + geom_bar(aes(color = cores), stat = "identity") +
           geom_point(aes(color = cores)) +
           geom_smooth(color = "red") +
-          geom_hline(yintercept=1, colour="blue", label = "baseline") +
-          geom_abline(slope=1, intercept=0, colour="green", label = "speedup")
+          geom_hline(yintercept=1, colour="blue") +
+          geom_abline(slope=1, intercept=0, colour="green")
         if (input$plotAmdahl && !is.null(papi)) {
-          p <- p + geom_line(aes(x = cores, y = speedup_amdahl), color = "orange", label = "amdahl")
+          p <- p + geom_line(aes(x = cores, y = speedup_amdahl), color = "orange")
         }
         p <- p + coord_cartesian(ylim=c(input$minY, input$maxY)) +
           scale_x_discrete() +
@@ -112,7 +112,7 @@ speedup <- function(input, output, session, db, exps) {
     }
   })
 
-  output$speedupTable = renderDataTable({
+  output$table = renderDataTable({
     validate(
       need(input$baseline, "Select a RAW-compatible experiment as baseline first."),
       need(input$jitExperiments, "Select a JIT-compatible experiment first.")
@@ -123,7 +123,7 @@ speedup <- function(input, output, session, db, exps) {
       papi <- NULL
     }
 
-    return(speedup(db(),
+    return(speedup_data(db(),
                    input$baseline,
                    input$jitExperiments,
                    papi,
@@ -157,4 +157,32 @@ speedup <- function(input, output, session, db, exps) {
 
 speedupMenu <- function() {
   menuItem("Speedup (Experiment)", tabName = "speedupExperiment")
+}
+
+speedup_data <- function(c, base, jit, papi, projects = NULL, groups = NULL) {
+  extra_filter <- ""
+  range_filter <- ""
+  if (!is.null(projects)) {
+    extra_filter <- sprintf("AND project.name IN (%s)",
+                            paste(lapply(as.vector(projects),
+                                         function(x) sprintf("\'%s\'", x)),
+                                  collapse=", "))
+  }
+  if (!is.null(groups)) {
+    extra_filter <- paste(extra_filter,
+                          sprintf(" AND project.group_name IN (%s)",
+                            paste(lapply(as.vector(groups),
+                                         function(x) sprintf("\'%s\'", x)),
+                                  collapse=", ")))
+  }
+
+  q <- ""
+  if (!is.null(papi)) {
+    cat("query-speedup (papi)\n val: (", paste(papi), ")\n")
+    q <- query_speedup_papi(extra_filter, base, jit, papi)
+  } else {
+    cat("query-speedup (no papi)\n")
+    q <- query_speedup_no_papi(extra_filter, base, jit)
+  }
+  return(sql.get(c, q))
 }

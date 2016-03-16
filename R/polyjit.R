@@ -136,34 +136,6 @@ query_speedup_no_papi <- function(extra_filter, base, jit) {
   return(q)
 }
 
-speedup <- function(c, base, jit, papi, projects = NULL, groups = NULL) {
-  extra_filter <- ""
-  range_filter <- ""
-  if (!is.null(projects)) {
-    extra_filter <- sprintf("AND project.name IN (%s)",
-                            paste(lapply(as.vector(projects),
-                                         function(x) sprintf("\'%s\'", x)),
-                                  collapse=", "))
-  }
-  if (!is.null(groups)) {
-    extra_filter <- paste(extra_filter,
-                          sprintf(" AND project.group_name IN (%s)",
-                            paste(lapply(as.vector(groups),
-                                         function(x) sprintf("\'%s\'", x)),
-                                  collapse=", ")))
-  }
-
-  q <- ""
-  if (!is.null(papi)) {
-    cat("query-speedup (papi)\n val: (", paste(papi), ")\n")
-    q <- query_speedup_papi(extra_filter, base, jit, papi)
-  } else {
-    cat("query-speedup (no papi)\n")
-    q <- query_speedup_no_papi(extra_filter, base, jit)
-  }
-  return(sql.get(c, q))
-}
-
 speedup_per_project <- function(c, project, base, exps = NULL) {
   exp_filter <- ""
   if (!is.null(exps) && length(exps) > 0) {
