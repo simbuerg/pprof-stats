@@ -130,7 +130,7 @@ query_speedup_no_papi <- function(extra_filter, base, jit) {
       SELECT project_name, metrics.name, SUM(metrics.value), config.name,
              cast ( config.value AS INTEGER) AS cval
       FROM run, metrics, config
-      WHERE experiment_group = '%s' AND run.id = metrics.run_id AND run.id = config.run_id AND metrics.name = 'time.real_s'
+      WHERE experiment_group = '%s' AND run.id = metrics.run_id AND run.id = config.run_id AND metrics.name = 'time.real_s' and metrics.value > 0
       GROUP BY project_name, metrics.name, config.name, cval
     ) AS pjit,
     (
