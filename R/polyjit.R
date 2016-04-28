@@ -432,6 +432,27 @@ SELECT * FROM
 	 return(sql.get(c, query = q))
 }
 
+db_real_time_s <- function(c, group = NULL, projects = NULL) {
+  in_groups <- in_set_expr("project.group_name", group)
+  in_projects <- in_set_expr("project.name", projects)
+
+  q <- sprintf(paste("
+SELECT * FROM
+	(
+	SELECT CAST(experiment_group AS TEXT) AS experiment_group, experiment.description, project_name, SUM(metrics.value) as mval, CAST( config.value AS INTEGER ) AS cval
+	FROM run, metrics, config, experiment, project
+	WHERE
+	 run.id = metrics.run_id AND run.id = config.run_id AND metrics.name = 'time.real_s' AND
+   run.experiment_group = experiment.id AND run.project_name = project.name AND
+	 (config.name = 'cores' OR experiment.name = 'raw') %s %s
+	GROUP BY experiment_group, experiment.description, experiment.name, project_name, cval
+	ORDER BY experiment_group, project_name ASC
+	) as values
+WHERE mval > 0;
+  "), in_groups, in_projects)
+  return(sql.get(c, query = q))
+}
+
 baselineR_vs_pivot_perf <- function(c, baselines, experiments, projects, groups, regions) {
   in_baselines <- in_set_expr("experiment_group", baselines)
   in_experiments <- in_set_expr("experiment_group", experiments)
