@@ -453,6 +453,29 @@ WHERE mval > 0;
   return(sql.get(c, query = q))
 }
 
+projects_with_instrumented_functions <- function(c) {
+  # Be careful, this function only considers the projects that were a successful
+  # member of the last pj-cs experiment.
+  q <- paste("
+  select distinct(run.project_name) from run, compilestats where
+	  run.id = compilestats.run_id and
+	  run.experiment_group = (
+		  select experiment.id from experiment where
+			  begin = (
+				  select max(begin) from experiment where
+					  experiment.name = 'pj-cs'
+				)
+	  ) and
+	  compilestats.name = 'Number of instrumented functions';
+  ")
+  return(sql.get(c, query = q))
+}
+
+db_real_jit_time_s <- function(c, group = NULL) {
+  projects <- projects_with_instrumented_functions(c)
+  return(db_real_time_s(c, group, projects$project_name))
+}
+
 baselineR_vs_pivot_perf <- function(c, baselines, experiments, projects, groups, regions) {
   in_baselines <- in_set_expr("experiment_group", baselines)
   in_experiments <- in_set_expr("experiment_group", experiments)
