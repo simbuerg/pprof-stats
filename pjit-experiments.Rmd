@@ -6,7 +6,7 @@ output:
     fig_caption: yes
     fig_height: 4
     fig_width: 16
-    highlight: null
+    highlight: pygments
     number_sections: yes
     theme: null
     toc: yes
@@ -27,19 +27,10 @@ library(ggplot2)
 # All experiments in the database
 
 ```{r db_setup, echo=FALSE, include=FALSE}
-d <- pprof::login.data('.pglogin')
-login <- d[d$name == 'bb',]
-db <- dbConnect(RPostgres::Postgres(),
-                 dbname = as.character(login$dbname),
-                 user = as.character(login$user),
-                 password = as.character(login$password),
-                 port = as.character(login$port),
-                 host = as.character(login$host))
-exps <- pprof::get_experiments(db)
 ```
 
 This provides an overview of all experiments available in the database.
-```{r db_info, echo=FALSE}
+```{r db_info, eval=FALSE, echo=FALSE}
 DT::datatable(exps)
 ```
 
@@ -72,7 +63,7 @@ res.filtered <- subset(res, cs_value < 100000)
 In the following paragraphs, we see the number of functions instrumented by
 PolyJIT.
 
-```{r, echo=FALSE}
+```{r, eval=FALSE, echo=FALSE}
 DT::datatable(res.filtered)
 ```
 
@@ -87,7 +78,7 @@ ggplot(res.filtered, aes(y = description, x = cs_value, color = description, fil
 ```
 
 ## Density area plot
-```{r, echo=FALSE}
+```{r, eval=FALSE, echo=FALSE}
 ggplot(res.filtered, aes(x = cs_value, color = description, fill = description)) +
   geom_density(position="fill", alpha=0.1) +
   scale_x_continuous(limits = c(1,50), breaks = seq(0,50,5)) +
@@ -95,7 +86,7 @@ ggplot(res.filtered, aes(x = cs_value, color = description, fill = description))
 ```
 
 ## Violin density plot
-```{r, echo=FALSE}
+```{r, eval=FALSE, echo=FALSE}
 ggplot(res.filtered, aes(x = description, y = cs_value, color = description, fill = description)) +
   theme(axis.text = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 1),
@@ -113,10 +104,10 @@ The following paragraphs show various results in the context of runtime experime
 
 ## Baselines vs Pivot
 
-```{r, echo = FALSE, include = FALSE}
+```{r, eval=FALSE, echo = FALSE, include = FALSE}
 bl <- c(
   '73d220af-c6fa-4e9e-b68a-2d58a2329c1c', # 2015-11-27 (SemiAsync)
-  '5b1385cc-2f22-4361-a0e9-b91df4b310d4'  # =spawn-chimaira-173
+  'c0a1199f-208f-4ccb-adf6-bf1bf71afa74' #spawn-chimaira-176 
   )
 piv <- bl
 d <- pprof::baseline_vs_pivot(db, bl, piv, NULL, NULL)
@@ -130,7 +121,7 @@ d.table <- d.filtered[ , !(names(d.filtered) %in% drops)]
 
 ```
 
-```{r, echo = FALSE}
+```{r, eval=FALSE, echo = FALSE}
 DT::datatable(d.table)
 p <- ggplot(data = d.filtered, aes(x = factor(num_cores), y = speedup, colour = pid)) +
   geom_boxplot(aes(group = num_cores), outlier.size = 0) +
@@ -138,13 +129,93 @@ p <- ggplot(data = d.filtered, aes(x = factor(num_cores), y = speedup, colour = 
 p
 ```
 
-```{r, echo = FALSE}
-DT::datatable(d.table)
-p <- ggplot(data = d.filtered, aes(x = project, y = speedup, fill = factor(num_cores))) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~ gname) +
-  theme(axis.text = element_text(size = 8),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position="none")
-p
+```{r, eval=FALSE, include=FALSE}
+plots <- lapply(piv, function(x, d) {
+  d.sub <- subset(d, baseline_id == x)
+  return(ggplot(data = d.sub, aes(x = project, y = speedup, fill = factor(num_cores))) +
+    geom_bar(stat = "identity", position = "dodge") +
+    facet_grid(gname ~ bid) +
+    theme(axis.text = element_text(size = 8), axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position="none"))
+}, d.filtered)
+plots
 ```
+
+## Per project speedup
+
+```{r, eval=FALSE, include=FALSE}
+if (!require(gtools)) {
+  install.packages("gtools")
+}
+library(gtools)
+```
+```{r, eval=FALSE, message=FALSE, include=FALSE}
+experiments_from_db <- exps[exps$name %in% c('pj-raw', 'raw'),]$id
+experiments <- gtools::permutations(length(experiments_from_db), 2, experiments_from_db)
+
+plots <- apply(experiments, 1, function(elem, db) {
+  baseline <- exps[exps$id == elem[1],]$description
+  experiment <- exps[exps$id == elem[2],]$description
+  speed <- sql.get(db, query_speedup_no_papi('', elem[1], elem[2]))
+
+  if (length(unique(speed$project_name)) > 30) {
+    plot <-ggplot(data = speed, aes(x = project_name, y = speedup_corrected, fill = factor(cores))) +
+      geom_bar(stat="identity", position = "dodge") +
+      theme(axis.text = element_text(size = 8), axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position="none") +
+      labs(title = paste("Baseline: ", baseline, " vs. ", experiment))
+    return(plot)
+  }
+  return(NULL)
+}, db)
+plots[!is.null(plots)]
+```
+
+## PolyBench
+```{r, echo = FALSE, message=FALSE}
+
+if (!require(reshape2)) { install.packages("reshape2") }
+library(reshape2)
+if (!require(rpivotTable)) { install.packages("rpivotTable")}
+library(rpivotTable)
+
+experiments_from_db <- exps[exps$name %in% c('pj-raw', 'raw'),]
+time_real_s <- db_real_time_s(db, group = c('polybench'))
+time_real_s.m <- reshape2::melt(time_real_s, id.var = c("experiment_group", "description", "project_name", "cval"))
+  
+#time_real_s.c <- reshape2::recast(time_real_s, project_name ~ description + cval, fun.aggregate = min, measure.var = c("mval"), id.var = c("experiment_group", "description", "project_name", "cval"))
+rpivotTable(time_real_s.m, rows = c("project_name"), vals = c("mvar"), cols = c("cval", "description"), width = "100%", height = "800px")
+```
+
+## LNT
+```{r, echo = FALSE, message=FALSE}
+
+if (!require(reshape2)) { install.packages("reshape2") }
+library(reshape2)
+if (!require(rpivotTable)) { install.packages("rpivotTable")}
+library(rpivotTable)
+
+experiments_from_db <- exps[exps$name %in% c('pj-raw', 'raw'),]
+time_real_s <- db_real_time_s(db, group = c('lnt'))
+time_real_s.m <- reshape2::melt(time_real_s, id.var = c("experiment_group", "description", "project_name", "cval"))
+  
+#time_real_s.c <- reshape2::recast(time_real_s, project_name ~ description + cval, fun.aggregate = min, measure.var = c("mval"), id.var = c("experiment_group", "description", "project_name", "cval"))
+rpivotTable(time_real_s.m, rows = c("project_name"), vals = c("mvar"), cols = c("cval", "description"), width = "100%", height = "800px")
+```
+
+## PPROF
+```{r, echo = FALSE, message=FALSE}
+
+if (!require(reshape2)) { install.packages("reshape2") }
+library(reshape2)
+if (!require(rpivotTable)) { install.packages("rpivotTable")}
+library(rpivotTable)
+
+experiments_from_db <- exps[exps$name %in% c('pj-raw', 'raw'),]
+time_real_s <- db_real_time_s(db, group = c('pprof'))
+time_real_s.m <- reshape2::melt(time_real_s, id.var = c("experiment_group", "description", "project_name", "cval"))
+  
+#time_real_s.c <- reshape2::recast(time_real_s, project_name ~ description + cval, fun.aggregate = min, measure.var = c("mval"), id.var = c("experiment_group", "description", "project_name", "cval"))
+rpivotTable(time_real_s.m, rows = c("project_name"), vals = c("mvar"), cols = c("cval", "description"), width = "100%", height = "800px")
+```
+
