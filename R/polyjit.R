@@ -27,10 +27,10 @@ login <- function(db_name = 'bb') {
 
 sql.get <- function(c, query) {
   n <- inc(1)
-  cat(n,"-", "query: ", query, "\n")
+  message(n,"-", "query: ", query, "\n")
   qr <- dbSendQuery(c, query)
   res <- dbFetch(qr)
-  cat(n,"-", "result set: ", dbGetRowCount(qr), "\n")
+  message(n,"-", "result set: ", dbGetRowCount(qr), "\n")
   dbClearResult(qr)
   return(res)
 }
