@@ -1,0 +1,64 @@
+---
+title: "PolyJIT run time evaluation"
+author: "Andreas Simbürger"
+date: "April 27, 2016"
+output:
+  html_document:
+    css: pjit-experiments.css
+    fig_caption: yes
+    fig_height: 16
+    fig_width: 24
+    highlight: pygments
+    number_sections: yes
+    theme: null
+    toc: yes
+  pdf_document:
+    toc: yes
+params:
+  group: polybench
+---
+
+```{r db_setup, include=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+devtools::load_all()
+library(RPostgres)
+library(DT)
+library(gridExtra)
+library(ggplot2)
+if (!require(reshape2)) { install.packages("reshape2") }
+library(reshape2)
+if (!require(rpivotTable)) { install.packages("rpivotTable")}
+library(rpivotTable)
+
+d <- pprof::login.data('.pglogin')
+login <- d[d$name == 'bb',]
+db <- dbConnect(RPostgres::Postgres(),
+                 dbname = as.character(login$dbname),
+                 user = as.character(login$user),
+                 password = as.character(login$password),
+                 port = as.character(login$port),
+                 host = as.character(login$host))
+exps <- pprof::get_experiments(db)
+```
+
+# Time Results
+```{r, echo = FALSE, message=FALSE}
+
+if (!require(reshape2)) { install.packages("reshape2") }
+library(reshape2)
+if (!require(rpivotTable)) { install.packages("rpivotTable")}
+library(rpivotTable)
+
+experiments_from_db <- exps[exps$name %in% c('pj-raw', 'raw'),]
+time_real_s <- pprof::db_real_jit_time_s(db, group = c(params$group))
+time_real_s.m <- reshape2::melt(time_real_s, id.var = c("experiment_group", "description", "project_name", "cval"))
+  
+#time_real_s.c <- reshape2::recast(time_real_s, project_name ~ description + cval, fun.aggregate = min, measure.var = c("mval"), id.var = c("experiment_group", "description", "project_name", "cval"))
+rpivotTable(time_real_s.m, rows = c("project_name"),
+            vals = c("value"),
+            cols = c("description", "cval"),
+            width = "100%",
+            height = "800px",
+            aggregatorName = "Minimum",
+            rendererName = "Row Heatmap")
+```
