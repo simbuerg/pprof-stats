@@ -294,6 +294,7 @@ SELECT
 	FORMAT('%%s (%%s)', baseline.name, baseline.description) as bid,
     FORMAT('%%s (%%s)', pivot.name, pivot.description) as gname,
 	CAST(pivot.id AS TEXT) AS pid,
+  CAST(baseline.id AS TEXT) AS baseline_id,
 	baseline.time AS seq_time,
 	pivot.time AS par_time,
     pivot.timestamp AS timestamp,
