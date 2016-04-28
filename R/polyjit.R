@@ -804,3 +804,8 @@ comps <- function(c) {
   q <- "SELECT DISTINCT component from compilestats;"
   return(sql.get(c, query = q))
 }
+
+get_exp_id_from_description <- function(c, desc) {
+  q <- sprintf("select get_exp_id_from_description('%s');", desc)
+  return(sql.get(c, query =q))
+}
