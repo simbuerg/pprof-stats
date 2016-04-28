@@ -14,6 +14,17 @@ login.data <- function(p) {
   }
 }
 
+login <- function(db_name = 'bb') {
+  d <- pprof::login.data('.pglogin')
+  login <- d[d$name == db_name,]
+  return(dbConnect(RPostgres::Postgres(),
+                   dbname = as.character(login$dbname),
+                   user = as.character(login$user),
+                   password = as.character(login$password),
+                   port = as.character(login$port),
+                   host = as.character(login$host)))
+}
+
 sql.get <- function(c, query) {
   n <- inc(1)
   cat(n,"-", "query: ", query, "\n")
