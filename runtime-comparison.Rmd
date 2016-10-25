@@ -15,7 +15,7 @@ output:
   pdf_document:
     toc: yes
 params:
-  group: polybench
+  group: lnt
 ---
 
 ```{r db_setup, include=FALSE, include=FALSE}

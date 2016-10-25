@@ -27,10 +27,11 @@ login <- function(db_name = 'bb') {
 
 sql.get <- function(c, query) {
   n <- inc(1)
-  message(n,"-", "query: ", query, "\n")
+
+  #message(n,"-", "query: ", query, "\n")
   qr <- dbSendQuery(c, query)
   res <- dbFetch(qr)
-  message(n,"-", "result set: ", dbGetRowCount(qr), "\n")
+  #message(n,"-", "result set: ", dbGetRowCount(qr), "\n")
   dbClearResult(qr)
   return(res)
 }
@@ -67,6 +68,48 @@ get_experiments_per_project <- function(c, project) {
 get_projects_per_experiment <- function(c, exp_id) {
   q <- sprintf("SELECT project_name as \"Project\", run.status as \"Status\", MAX(run.\"end\") as \"Completed @\" FROM run, log WHERE run.id = log.run_id AND experiment_group = '%s' GROUP BY project_name, run.status;", exp_id)
   return(sql.get(c, q))
+}
+
+projects_with_instrumented_functions <- function(c) {
+  # Be careful, this function only considers the projects that were a successful
+  # member of the last pj-cs experiment.
+  q <- paste("
+  select distinct(run.project_name) from run, compilestats where
+	  run.id = compilestats.run_id and
+	  run.experiment_group = (
+		  select experiment.id from experiment where
+			  begin = (
+				  select max(begin) from experiment where
+					  experiment.name = 'pj-cs'
+				)
+	  ) and
+	  compilestats.name = 'Number of instrumented functions';
+  ")
+  return(sql.get(c, query = q))
+}
+
+in_set_expr <- function(key, elems = NULL) {
+  set_expr <- ""
+  if (!is.null(elems)) {
+    set_expr <- paste(set_expr,
+                      sprintf(" AND %s IN (%s)", key,
+                              paste(lapply(as.vector(elems),
+                                           function(x) sprintf("\'%s\'", x)),
+                                    collapse=", ")))
+  }
+  return(set_expr)
+}
+
+in_arr_expr <- function(elems = NULL) {
+  arr_expr <- ""
+  if (!is.null(elems)) {
+    arr_expr <- paste(arr_expr,
+                      sprintf("{%s}",
+                              paste(lapply(as.vector(elems),
+                                           function(x) sprintf("%s", x)),
+                                    collapse=", ")))
+  }
+  return(arr_expr)
 }
 
 query_speedup_papi <- function(extra_filter, base, jit, papi) {
@@ -114,7 +157,8 @@ query_speedup_papi <- function(extra_filter, base, jit, papi) {
 ;"), jit, base, papi, papi, extra_filter)
   return(q)
 }
-query_speedup_no_papi <- function(extra_filter, base, jit) {
+query_speedup_no_papi <- function(extra_filter, base, jit, projects = NULL) {
+    in_projects <- in_set_expr("spd.project_name", projects)
     q <- sprintf(paste(
 "SELECT spd.project_name, spd.cores, spd.ptime, spd.time, spd.speedup,
     CASE WHEN spd.speedup >= 0.5 OR spd.speedup = 0 THEN spd.speedup
@@ -142,8 +186,8 @@ query_speedup_no_papi <- function(extra_filter, base, jit) {
     WHERE pjit.project_name = raw.project_name
     ORDER BY cores ASC
  ) AS spd, project
- WHERE spd.project_name = project.name %s ORDER BY speedup_corrected
-;"), jit, base, extra_filter)
+ WHERE spd.project_name = project.name %s %s ORDER BY speedup_corrected
+;"), jit, base, in_projects, extra_filter)
   return(q)
 }
 
@@ -264,18 +308,6 @@ flamegraph <- function(c, exp, project) {
 }
 
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
-
-in_set_expr <- function(key, elems = NULL) {
-  set_expr <- ""
-  if (!is.null(elems)) {
-    set_expr <- paste(set_expr,
-                      sprintf(" AND %s IN (%s)", key,
-                              paste(lapply(as.vector(elems),
-                                           function(x) sprintf("\'%s\'", x)),
-                                    collapse=", ")))
-  }
-  return(set_expr)
-}
 
 baseline_vs_pivot <- function(c, baselines, experiments, projects, groups) {
   in_baselines <- in_set_expr("experiment_group", baselines)
@@ -453,26 +485,9 @@ WHERE mval > 0;
   return(sql.get(c, query = q))
 }
 
-projects_with_instrumented_functions <- function(c) {
-  # Be careful, this function only considers the projects that were a successful
-  # member of the last pj-cs experiment.
-  q <- paste("
-  select distinct(run.project_name) from run, compilestats where
-	  run.id = compilestats.run_id and
-	  run.experiment_group = (
-		  select experiment.id from experiment where
-			  begin = (
-				  select max(begin) from experiment where
-					  experiment.name = 'pj-cs'
-				)
-	  ) and
-	  compilestats.name = 'Number of instrumented functions';
-  ")
-  return(sql.get(c, query = q))
-}
-
 db_real_jit_time_s <- function(c, group = NULL) {
   projects <- projects_with_instrumented_functions(c)
+  projects <- NULL
   return(db_real_time_s(c, group, projects$project_name))
 }
 
@@ -808,4 +823,12 @@ comps <- function(c) {
 get_exp_id_from_description <- function(c, desc) {
   q <- sprintf("select get_exp_id_from_description('%s');", desc)
   return(sql.get(c, query =q))
+}
+
+region_wise_comparison <- function(c, exp_ids) {
+  exps <- in_arr_expr(exp_ids)
+  q <- sprintf(paste("
+    select * from compare_region_wise(\'%s\'::UUID[]);
+  "), exps)
+  return(sql.get(c, query = q))
 }
