@@ -15,7 +15,7 @@ login.data <- function(p) {
 }
 
 login <- function(db_name = 'bb') {
-  d <- pprof::login.data('.pglogin')
+  d <- login.data('.pglogin')
   login <- d[d$name == db_name,]
   return(dbConnect(RPostgres::Postgres(),
                    dbname = as.character(login$dbname),
