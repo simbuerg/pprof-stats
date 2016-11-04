@@ -110,6 +110,10 @@ neg <- neg[neg$speedup < -1.1,]
 neg$t <- "bad"
 pos$t <- "good"
 
+box_plot(all)
+box_plot(pos)
+box_plot(neg)
+
 all <- rbind(neg, pos)
 pdf(file = "./box-plot_all.pdf")
 box_plot(all)
