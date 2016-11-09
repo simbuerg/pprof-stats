@@ -89,32 +89,32 @@ data <- data[complete.cases(data),]
 data
 
 box_plot <- function(plot_data) {
-  plot <- ggplot(data = plot_data, aes(y=speedup, x=cores, color=cores)) +
+  plot <- ggplot(data = plot_data, aes(y=speedup, x=cores)) +
     geom_violin(trim= TRUE, adjust = 0.5) +
-    geom_jitter(height=0, size=0.5) +
+    #geom_jitter(height=0, size=0.5) +
     geom_hline(yintercept=0) +
     coord_cartesian(ylim = c(min(plot_data$speedup),max(plot_data$speedup))) +
     xlab("Number of cores") +
     ylab("Speedup: Recompilation over baseline") +
-    theme(axis.text = element_text(size = 8),
-          axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text = element_text(size = 9))
   return(plot)
 }
 
-pos <- data[(as.numeric(data$cores) %in% c(1,2,5)),]
+pos <- data[(as.numeric(data$cores) %in% c(1,2,3,5)),]
 pos <- pos[pos$speedup > 1.1,]
-neg <- data[(as.numeric(data$cores) %in% c(1,2,5)),]
+neg <- data[(as.numeric(data$cores) %in% c(1,2,3,5)),]
 neg <- neg[neg$speedup < -1.1,]
 #data_pos <- data_filter[(data_filter$speedup > 0.50),]
 
 neg$t <- "bad"
 pos$t <- "good"
 
+all <- rbind(neg, pos)
+
 box_plot(all)
 box_plot(pos)
 box_plot(neg)
 
-all <- rbind(neg, pos)
 pdf(file = "./box-plot_all.pdf")
 box_plot(all)
 dev.off()
