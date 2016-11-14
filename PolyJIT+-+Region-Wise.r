@@ -72,13 +72,16 @@ bar_plot <- function(plot_data) {
 
 box_plot <- function(plot_data) {
   plot <- ggplot(data = plot_data, aes(y=speedup, x=cores)) +
-    geom_violin(trim= TRUE, adjust = 0.5) +
+    geom_violin(trim= TRUE, adjust = 1) +
+    geom_boxplot(width=.1, outlier.size = 0) +
     #geom_jitter(height=0, size=0.5) +
     geom_hline(yintercept=0) +
+    scale_y_discrete(limits = c(-40,-30,-20,-10,-5,-4,-3,-2,-1,0,1,2,3,4,5,10,20,30,40)) +
     coord_cartesian(ylim = c(min(plot_data$speedup),max(plot_data$speedup))) +
     xlab("Number of cores") +
     ylab("Speedup: Recompilation over baseline") +
-    theme(axis.text = element_text(size = 9))
+    theme(axis.title = element_text(size = 10),
+          axis.text = element_text(size = 10))
   return(plot)
 }
 
@@ -118,7 +121,9 @@ spec <- plot_comparison_data(c('058b87a9-4e18-4dc6-a3cb-5cde41329d4d'))
 lnt_ssb <- plot_comparison_data(c('3cb17d02-4a6c-40d2-8896-f9f357e1bd9d'))
 polybench <- plot_comparison_data(c('6005160b-fb89-4538-a982-d891f5a9f323'))
 lnt_msb <- plot_comparison_data(c('71ff99e8-d65c-4a36-8ee4-e6068a290eb5'))
+lnt_msa <- plot_comparison_data(c('3d979f16-8d8c-4d5e-b51a-f2a6c963cfd3'))
 scimark <- plot_comparison_data(c('d8fba4ac-1afb-4121-a8c0-f4c5ffd9ac16'))
+benchbuild <- plot_comparison_data(c('395e0449-4e7f-4366-9928-eaae699be388'))
 
 print_regions <- function(cls, data) {
   projects <- levels(as.factor(data$project))
@@ -132,8 +137,10 @@ print_regions <- function(cls, data) {
 print_regions("spec", spec)
 print_regions("lnt_ssb", lnt_ssb)
 print_regions("lnt_msb", lnt_msb)
+print_regions("lnt_msa", lnt_msa)
 print_regions("scimark", scimark)
 print_regions("polybench", polybench)
+print_regions("benchbuild", benchbuild)
 
 print_runs <- function(cls, data) {
 
@@ -155,19 +162,17 @@ print_regions("scimark", scimark)
 print_regions("polybench", polybench)
 
 data$region_name <- as.numeric(factor(data$region_name))
-#data <- data[data$runtime_jit > 1000,]
+data <- data[data$runtime_jit > 1000,]
 data <- transform(data, speedup = ifelse(speedup >= 1, speedup, -1/speedup))
 data <- data[complete.cases(data),]
 data <- data[!is.infinite(data$speedup),]
 
 pos <- data[(as.numeric(data$cores) %in% c(1,2,3,4,5,6,7,8)),]
-pos <- pos[pos$speedup < 40,]
-#pos <- pos[pos$speedup > 1.1,]
-pos <- pos[pos$speedup > 0,]
+pos <- pos[pos$speedup < 30,]
+pos <- pos[pos$speedup > 1.1,]
 neg <- data[(as.numeric(data$cores) %in% c(1,2,3,4,5,6,7,8)),]
-#neg <- neg[neg$speedup < -1.1,]
-neg <- neg[neg$speedup < 0,]
-neg <- neg[neg$speedup > -40,]
+neg <- neg[neg$speedup < -1.1,]
+neg <- neg[neg$speedup > -30,]
 #data_pos <- data_filter[(data_filter$speedup > 0.50),]
 
 neg$t <- "bad"
@@ -175,11 +180,13 @@ pos$t <- "good"
 
 all <- rbind(neg, pos)
 
+options(repr.plot.width=11, repr.plot.height=4)
 box_plot(all)
 box_plot(pos)
 box_plot(neg)
 
-pdf(file = "./box-plot_all.pdf")
+#pdf(file = "./box-plot_all.pdf", family = "ComputerModern")
+pdf(file = "./box-plot_all.pdf", width = 11, height=8)
 box_plot(all)
 dev.off()
 
@@ -191,5 +198,57 @@ pdf(file = "./box-plot_neg.pdf")
 box_plot(neg)
 dev.off()
 
+length(levels(as.factor(pos$project)))
+length(levels(as.factor(neg$project)))
 
+length(levels(as.factor(neg$region_name)))
+length(levels(as.factor(pos$region_name)))
+length(levels(as.factor(all$region_name)))
 
+csv <-read.csv("/home/simbuerg/Documents/2016/2017-PLDI-polyjit/sql/data.csv")
+mean(csv$dyncov)
+min(
+min(csv$s2),
+min(csv$s3),
+min(csv$s4[!is.na(csv$s4)]),
+min(csv$s5[!is.na(csv$s5)]))
+
+max(
+max(csv$s2),
+max(csv$s3),
+max(csv$s4[!is.na(csv$s4)]),
+max(csv$s5[!is.na(csv$s5)]))
+
+box_plot_small <- function(plot_data, ylims, scale_limits) {
+  plot <- ggplot(data = plot_data, aes(y=speedup, x=cores)) +
+    geom_violin(trim= TRUE, adjust = 1) +
+    geom_boxplot(width=.1, outlier.size = 0) +
+    #geom_jitter(height=0, size=0.5) +
+    scale_y_discrete(limits = scale_limits) +
+    coord_cartesian(ylim = ylims) +
+    xlab("Number of cores") +
+    ylab("Speedup: Recompilation over baseline") +
+    theme(axis.title = element_text(size = 10),
+          axis.text = element_text(size = 10))
+  return(plot)
+}
+
+options(repr.plot.width=4, repr.plot.height=2)
+pos_small_data <- pos[pos$speedup<=10 & pos$cores %in% c(1,5),]
+neg_small_data <- neg[neg$speedup>=-10 & neg$cores %in% c(1,5),]
+
+pos_small <- box_plot_small(pos_small_data,
+                            ylims=c(1, 10),
+                            scale_limits=c(1,2,3,4,5,10))
+neg_small <- box_plot_small(neg_small_data,
+                            ylims=c(-5, -1),
+                            scale_limits=c(-5,-4,-3,-2,-1))
+
+length(levels(as.factor(pos_small_data$region_name)))
+
+pdf(file = "./box-plot_small_pos.pdf", width = 6, height=6)
+pos_small
+dev.off()
+pdf(file = "./box-plot_small_neg.pdf", width = 6, height=6)
+neg_small
+dev.off()
